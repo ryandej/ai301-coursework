@@ -2,60 +2,76 @@
 
 Path: `beat-1-sandbox/unit-4/pull-request.md`
 
-Record of the pull request you opened against the Path Review repo, and of the evaluation
-runs that produced `eval-run.txt`. This file is graded at the path above; a copy kept
-anywhere else in the repository is not read.
-
-Complete every labelled field below. Each is graded on its own; content placed under the wrong
-label is not graded.
-
----
-
 ## Your pull request
 
 **Pull request**
 
-[Link to the pull request you opened. It must be the pull request's own page on the Path
-Review repo, not your fork's branch page.]
+https://github.com/codepath/pathreview-ai301-fa26-s3/pull/257
 
 **Branch**
 
-[The name of the branch the pull request comes from, exactly as it appears in your fork.
-The naming shape is a type prefix, then the issue number, then a short description. **The
-issue number in the branch name must be the number of the issue the pull request fixes** —
-a name carrying any other number does not satisfy this field.]
+`fix/73-openrouter-env-example`
 
 ## Eval iterations
 
-Answer all four sections. Quote source text directly; paraphrase does not satisfy these
-fields.
-
 **Run history**
 
-[The agreement score of each run you did, in order. A single run is a complete answer if
-only one run occurred. **The last score in your list must match the agreement line in the
-`eval-run.txt` you committed** — that file is the record of your final run.]
+1. Full run: `13/20`
+2. Partial run (`pkg-02,pkg-05,pkg-04,pkg-01`): `4/4`
+3. Partial run (`pkg-08,pkg-11,pkg-13,pkg-16,pkg-19,pkg-07,pkg-20,pkg-03,pkg-12`): `8/9`
+4. Partial run (`pkg-16,pkg-03`): `2/2`
+5. Final full run: `20/20`
+
+Final recorded agreement:
+
+> `agreement: 20/20 scored items  (bar: 18/20: PASS)`
 
 **Package analysis**
 
-[Pick one scored package (`pkg-01` through `pkg-20` — the four `calib-` packages are never
-scored). Name it by id, say what your rubric decided and what the gold label said, and
-explain why your rubric read it that way.]
+I used `pkg-16`.
+
+The final eval result was:
+
+> `pkg-16  clear-accept    accept  accept   yes`
+
+My rubric therefore decided `accept`, and the gold label was also `accept`.
+
+The package's accepted plan explicitly said:
+
+> "make the failure visible on the `image load` path without changing the start path's semantics."
+
+It also stated:
+
+> "Deliberately deferred, stated in the plan: the start-time loading path (multi-node, where a per-node failure may genuinely be non-fatal) keeps its current tolerant behavior"
+
+The candidate PR matched that boundary and repeated it clearly:
+
+> "Deliberately out of scope (recorded in the plan and discussed with @nirs on the thread): the start-time image loading path keeps its tolerant behavior"
+
+My rubric initially rejected this package because it treated possible effects on the shared `DoLoadImages` code path as silent drift. That was too speculative. The package itself showed that the changed behavior was intentional, bounded, and consistent with the accepted plan, so the final rubric correctly accepted it.
 
 **Check rationale**
 
-[Quote one check from the `rubric.md` you uploaded to `tools/pr-precheck/`, exactly as it reads now.
-Then say why it reads that way — what you revised to get there, or what you rejected in
-favour of it.]
+The final Plan fidelity check in `rubric.md` reads:
+
+> `| Plan fidelity | Read the branch diff's changed files and substantive hunks against the final plan's scope, implementation steps, and \`## Deviations\`. Also compare the PR description's claims with the plan and diff. | Passes if the substantive work shown in the diff stays within the plan or an explicitly recorded deviation, and the description accurately represents what the diff demonstrates. A planned item may be deferred without failing when the deferral is explicitly recorded in the plan or deviations and honestly disclosed in the description. Fail for demonstrated silent extra work, silently omitted planned work, or fidelity claims contradicted by the diff. Do not infer silent drift solely from hypothetical or transitive effects on callers or code paths that the package does not show; grade the behavior and changes evidenced in the package. | required |`
+
+I revised this check after `pkg-16` was incorrectly rejected. The important addition was:
+
+> "Do not infer silent drift solely from hypothetical or transitive effects on callers or code paths that the package does not show"
+
+That keeps the check focused on demonstrated plan-versus-diff drift instead of rejecting a PR because of a possible downstream effect that the package does not actually show.
 
 **Trade-offs**
 
-[Every check gives something up. Any one of these is a complete answer: a package whose
-result it changes, a canary you re-ran with `--only`, a case you accept it will miss, or a
-stated reason nothing changed elsewhere. "Nothing changed, and here is how I know" earns
-the point in full when the reason follows.]
+The trade-off is that this version of Plan fidelity is less aggressive about inferring indirect effects. A real transitive behavior change could be missed when the package does not provide evidence of it. I accepted that trade-off because the skill is supposed to grade the supplied PR package, not invent unsupported failure modes.
 
----
+I re-ran the relevant canary with:
 
-Related paths: `eval-run.txt` in this directory; your skill's files in
-`tools/pr-precheck/`.
+> `--only pkg-16,pkg-03`
+
+That run scored:
+
+> `2/2`
+
+This showed that the revision fixed the false rejection on the clear-accept `pkg-16` while still rejecting the silent-drift package `pkg-03`.
